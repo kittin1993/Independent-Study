@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="FileHeater">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/out/artifacts/FileHeater_jar/FileHeater.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
