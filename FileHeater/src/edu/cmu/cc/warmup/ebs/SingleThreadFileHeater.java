@@ -113,7 +113,7 @@ public class SingleThreadFileHeater {
                     //System.out.println(i);
                     fstream.write(timeSaver.get(i).pos + "\t" + timeSaver.get(i).time + "\n");
                 }
-                System.out.println("Wrote experiment data to log file: "+ fileName);
+                //System.out.println("Wrote experiment data to log file: "+ fileName);
                 fstream.close();
             }
             catch(Exception e)

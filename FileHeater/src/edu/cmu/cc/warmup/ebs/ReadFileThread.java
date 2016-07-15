@@ -12,17 +12,19 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Created by xym1993 on 6/15/16.
  */
 public class ReadFileThread extends Thread{
-    ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
-    ReentrantReadWriteLock rwl1 = new ReentrantReadWriteLock();
+    //ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private RandomAccessFile raf;
-
+    private int statusFlag;
     private int blockSize;
     private int readTime;
+    private long step;
     //private int testTime;
     private String filename;
     private String fileNamePrefix;
     private FileWriter fstream;
     private LinkedBlockingQueue queue;
+    private int threadNum;
+    private long eachLength;
 
     //    private ArrayList<Long> timeSaver;
     private ArrayList<posTimePair> timeSaver;
@@ -46,7 +48,7 @@ public class ReadFileThread extends Thread{
     }
 
     //Constructor, open the file and get the file length.
-    public ReadFileThread(LinkedBlockingQueue queue, FileWriter fstream, String filename,int blockSize, int readTime, String fileNamePrefix)
+    public ReadFileThread(int statusFlag, LinkedBlockingQueue queue, FileWriter fstream, String filename,int blockSize, int readTime, String fileNamePrefix)
     {
         try {
             //this.filename = filename;
@@ -55,11 +57,38 @@ public class ReadFileThread extends Thread{
             //fileLength = raf.length();
             timeSaver = new ArrayList<>();
            // System.out.println("File length is "+fileLength);
+            this.statusFlag = statusFlag;
             this.filename = filename;
             this.queue = queue;
             this.fstream = fstream;
             this.blockSize = blockSize;
             this.readTime = readTime;
+            this.fileNamePrefix = fileNamePrefix;
+
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    public ReadFileThread(int statusFlag, int threadNum, long eachLength, String filename,int blockSize,long step, String fileNamePrefix)
+    {
+        try {
+            //this.filename = filename;
+
+            //raf = new RandomAccessFile(filename, "r"); //java.io has this class RandomAccessFile(filename, mode)
+            //fileLength = raf.length();
+            timeSaver = new ArrayList<>();
+            // System.out.println("File lenglong startPos,th is "+fileLength);
+            this.statusFlag = statusFlag;
+            this.threadNum = threadNum;
+            this.eachLength = eachLength;
+            this.filename = filename;
+            //this.queue = queue;
+            //this.fstream = fstream;
+            this.blockSize = blockSize;
+            this.step = step;
             this.fileNamePrefix = fileNamePrefix;
 
         }
@@ -77,12 +106,7 @@ public class ReadFileThread extends Thread{
         try {
             byte[] tempBuffer = new byte[readBytes];
             raf.seek(position); //set the position-pointer offset
-            startTime = System.nanoTime();
-            rwl.readLock().lock();
             raf.read(tempBuffer); //Reads up to tempBuffer.length bytes of data from this file into an array of bytes.
-            rwl.readLock().unlock();
-            endTime = System.nanoTime();
-
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -90,29 +114,21 @@ public class ReadFileThread extends Thread{
         return endTime-startTime;
     }
 
-    //Read the file with certain blocksize sequentially. The step is the same as blocksize
-    /*
-    public void sequentialReadThrough(int blockSize)
+    //Read the file with certain blocksize for each step sequentially.
+    public void sequentialReadThrough(long startPos,long eachLength, int blockSize,long step)
     {
         long count;
-        count = this.fileLength/blockSize;
-        System.out.println(count);
+        count = eachLength/step;
+
+        //System.out.println("count:"+ count);
+        long pos = startPos+262144;
+        //System.out.println("startPos: "+ startPos);
+        //System.out.println("pos: "+ (pos/1048576));
         for( long i=0; i<count; i++ ) {
-            timeSaver.add(new posTimePair(i*blockSize, blockReadNanoTime(blockSize, i * blockSize)));
+            timeSaver.add(new posTimePair(pos+i*step, blockReadNanoTime(blockSize, pos+i*step)));
         }
     }
 
-    //Read the file with certain blocksize for each step sequentially.
-    public void sequentialReadThrough(int blockSize, long step)
-    {
-        long count;
-        count = this.fileLength/step;
-        System.out.println(count);
-        for( long i=0; i<count; i++ ) {
-            timeSaver.add(new posTimePair(i*step, blockReadNanoTime(blockSize, i*step)));
-        }
-    }
-    */
     //Randomly read the file with certain blocksize to readtime.
     public void randomReadThrough(String filename, long fileLength, int blockSize, int readTime)
     {
@@ -166,6 +182,34 @@ public class ReadFileThread extends Thread{
         }
     }
 
+    public void seqSaveLastArrayToFile(String fileNamePrefix, int threadNum)
+    {
+        try {
+            String temp;
+            BufferedReader out = null;
+            try{
+                FileWriter fstream = new FileWriter(fileNamePrefix+"_"+threadNum, false);
+                for(int i=0; i < timeSaver.size() ; i++ )
+                {
+                    //System.out.println(i);
+                    //System.out.println("put data to queue:"+timeSaver.get(i).pos+" "+timeSaver.get(i).time );
+                    //queue.put(timeSaver.get(i));
+                    fstream.write((timeSaver.get(i).pos) + "\t" + timeSaver.get(i).time + "\n");
+                }
+                //System.out.println("Wrote experiment data to log file: " + fileNamePrefix+"_"+threadNum);
+                fstream.close();
+            }
+            catch(Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
     //Test multiTimes randomly, the read size if BlockSize, for each test, read readTime times, totally run testTime times.
     //the result will be save to file fileNamePrefix_0 fileNamePrefix_1 ..... fileNamePrefix_(testTime-1)
     public void randomMultiTests(String filename, int blockSize, int readTime, String fileNamePrefix)
@@ -173,7 +217,7 @@ public class ReadFileThread extends Thread{
 
 
             //System.out.println("filename:"+filename);
-            long fileLength = 10000;
+            long fileLength = 0;
             try{
 
                 raf = new RandomAccessFile(filename, "r");
@@ -194,14 +238,26 @@ public class ReadFileThread extends Thread{
 
     //Test multiTimes randomly, the read size if BlockSize, for each test, read readTime times, totally run testTime times.
     //the result will be save to file fileNamePrefix_0 fileNamePrefix_1 ..... fileNamePrefix_(testTime-1)
-    public void sequenceMultiTests(int blockSize, long step, int testTime, String fileNamePrefix)
+    public void sequenceMultiTests(String filename, long eachLength, int threadNum, int blockSize, long step, String fileNamePrefix)
     {
-        for(int i = 0; i < testTime ; i++)
-        {
-            //sequentialReadThrough(blockSize, step);
-            saveLastArrayToFile(fileNamePrefix + "_" + Integer.toString(i));
-            clearArray();
+        long fileLength = 0;
+        long startPos = ((eachLength*threadNum)/1048576)*1048576;
+        System.out.println("startPos:"+startPos);
+
+        try{
+
+            raf = new RandomAccessFile(filename, "r");
+            //fileLength = raf.length();
+            //System.out.println(filename+": File length is "+fileLength);
         }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+            System.out.println("eachlength is "+eachLength);
+            sequentialReadThrough(startPos, eachLength, blockSize, step);
+            //seqSaveLastArrayToFile(fileNamePrefix, threadNum);
+            //clearArray();
+
     }
 
     //Clear the test result array
@@ -215,7 +271,15 @@ public class ReadFileThread extends Thread{
     public void run(){
 
         //System.out.println("Run a new thread");
-        randomMultiTests(filename, blockSize, readTime, fileNamePrefix);
+        if (statusFlag == 0){
+            randomMultiTests(filename, blockSize, readTime, fileNamePrefix);
+        }
+        else{
+            //System.out.println("seq mode");
+            sequenceMultiTests(filename, eachLength, threadNum, blockSize, step, fileNamePrefix);
+            //long endTime = System.currentTimeMillis();
+            //System.out.println("endTime:"+endTime);
+        }
         //rwl.readLock().unlock();
     }
 
