@@ -44,8 +44,9 @@ public class SingleThreadFileHeater {
         long startTime = 0, endTime = 0;
         try {
             byte[] tempBuffer = new byte[readBytes];
-            raf.seek(position); //set the position-pointer offset
             startTime = System.nanoTime();
+            raf.seek(position); //set the position-pointer offset
+
             raf.read(tempBuffer); //Reads up to tempBuffer.length bytes of data from this file into an array of bytes.
             endTime = System.nanoTime();
 
@@ -148,7 +149,7 @@ public class SingleThreadFileHeater {
         {
             sequentialReadThrough(blockSize, step);
             saveLastArrayToFile(fileNamePrefix + "_" + Integer.toString(i));
-            clearArray();
+            //clearArray();
         }
     }
 
@@ -163,14 +164,24 @@ public class SingleThreadFileHeater {
     {
         try{
             SingleThreadFileHeater newFile = new SingleThreadFileHeater(args[0]);
+            System.out.println(args[1]);
+
             if(args[1].equals("rand")){
                 newFile.randomMultiTests(Integer.parseInt(args[2]), Integer.parseInt(args[3]),
                         Integer.parseInt(args[4]), args[5]);
             }
             else if(args[1].equals("seq"))
+
             {
-                newFile.sequenceMultiTests(Integer.parseInt(args[2]), Long.parseLong(args[3]),
+                long startTime = 0, endTime = 0;
+                startTime = System.nanoTime();
+
+                newFile.sequenceMultiTests(Integer.parseInt(args[2])*1024, Long.parseLong(args[3])*1024,
                         Integer.parseInt(args[4]), args[5]);
+
+                endTime = System.nanoTime();
+
+                System.out.println("TOTAL Time:" + (endTime - startTime));
             }
             else
             {

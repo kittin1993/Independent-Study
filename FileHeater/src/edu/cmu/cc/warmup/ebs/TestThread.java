@@ -1,5 +1,6 @@
 package edu.cmu.cc.warmup.ebs;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Array;
@@ -64,7 +65,7 @@ public class TestThread {
 
             }
 
-            //Arguments: filename totalthread seq/rand blockSize step outfile
+            //Arguments: filename totalthread seq/rand blockSize step outfile startPos endPos
             else if(args[2].equals("seq"))
             {
                 // Multiple thread
@@ -75,6 +76,7 @@ public class TestThread {
                 String filename = args[0];
                 int totalThread = Integer.parseInt(args[1]);
 
+
                 RandomAccessFile raf = new RandomAccessFile(filename, "r"); //java.io has this class RandomAccessFile(filename, mode)
                 long fileLength = raf.length();
                 long eachLength = fileLength/totalThread;
@@ -83,7 +85,10 @@ public class TestThread {
                 int blockSize = Integer.parseInt(args[3])*1024;
                 long step = Long.parseLong(args[4])*1024;
                 String out_file = args[5];
+                long startPos = Long.parseLong(args[6])*1024;
+                long endPos = Long.parseLong(args[7])*1024;
                 //FileWriter fstream = new FileWriter(out_file, false);
+
                 System.out.println("thread Number:"+totalThread);
                 // Create an arraylist
                 //ArrayList<LinkedBlockingQueue> queueList = new ArrayList<LinkedBlockingQueue>();

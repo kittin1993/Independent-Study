@@ -3,17 +3,25 @@ package edu.cmu.cc.warmup.ebs;
 import java.io.BufferedReader;
 import java.io.FileWriter;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousChannel;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import static java.nio.file.StandardOpenOption.READ;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Created by xym1993 on 6/15/16.
+ * Created by yumengx on 6/15/16.
  */
 public class ReadFileThread extends Thread{
     //ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private RandomAccessFile raf;
+    private AsynchronousFileChannel afc;
     private int statusFlag;
     private int blockSize;
     private int readTime;
@@ -103,6 +111,7 @@ public class ReadFileThread extends Thread{
     private long blockReadNanoTime(int readBytes, long position)
     {
         long startTime = 0, endTime = 0;
+        /*
         try {
             byte[] tempBuffer = new byte[readBytes];
             raf.seek(position); //set the position-pointer offset
@@ -111,6 +120,27 @@ public class ReadFileThread extends Thread{
         catch (Exception e) {
             e.printStackTrace();
         }
+        */
+        try{
+            //startTime = System.nanoTime();
+//          ByteBuffer dataBuffer = ByteBuffer.allocate(readBytes);
+            byte[] tempBuffer = new byte[readBytes];
+            ByteBuffer dataBuffer = ByteBuffer.wrap(tempBuffer);
+            Future<Integer> result = afc.read(dataBuffer, position);
+            try{
+                Thread.sleep(20);
+            }catch (Exception e){
+
+            }
+            //endTime = System.nanoTime();
+            int bytes = result.get();
+            //System.out.println(position/1024 + "\t" + (endTime-startTime) );
+            //System.out.format("%s bytes read %n", bytes);
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
         return endTime-startTime;
     }
 
@@ -120,10 +150,18 @@ public class ReadFileThread extends Thread{
         long count;
         count = eachLength/step;
 
-        //System.out.println("count:"+ count);
+        System.out.println("count:"+ count);
         long pos = startPos+262144;
         //System.out.println("startPos: "+ startPos);
         //System.out.println("pos: "+ (pos/1048576));
+
+        /*
+        ByteBuffer[] dataBuffer =new ByteBuffer[(int)count];
+        for(int i = 0; i< count;i++)
+        {
+            dataBuffer[i] = ByteBuffer.allocate(blockSize);
+        }
+        */
         for( long i=0; i<count; i++ ) {
             timeSaver.add(new posTimePair(pos+i*step, blockReadNanoTime(blockSize, pos+i*step)));
         }
@@ -137,6 +175,7 @@ public class ReadFileThread extends Thread{
         {
             long pos = Math.abs(randomPosGenerator.nextLong())%(fileLength-blockSize);
             //System.out.println(pos);
+            ByteBuffer dataBuffer = ByteBuffer.allocate(blockSize);
             timeSaver.add(new posTimePair(pos,blockReadNanoTime(blockSize, pos)));
         }
     }
@@ -245,18 +284,19 @@ public class ReadFileThread extends Thread{
         System.out.println("startPos:"+startPos);
 
         try{
-
+            /*
             raf = new RandomAccessFile(filename, "r");
-            //fileLength = raf.length();
-            //System.out.println(filename+": File length is "+fileLength);
+           */
+            Path path = Paths.get(filename);
+            afc = AsynchronousFileChannel.open(path, READ);
         }
         catch(Exception e){
             e.printStackTrace();
         }
-            System.out.println("eachlength is "+eachLength);
+            System.out.println("eachlength is " + eachLength);
             sequentialReadThrough(startPos, eachLength, blockSize, step);
-            //seqSaveLastArrayToFile(fileNamePrefix, threadNum);
-            //clearArray();
+            seqSaveLastArrayToFile(fileNamePrefix, threadNum);
+            clearArray();
 
     }
 
@@ -276,7 +316,12 @@ public class ReadFileThread extends Thread{
         }
         else{
             //System.out.println("seq mode");
+            long startTime = 0, endTime = 0;
+            startTime = System.nanoTime();
             sequenceMultiTests(filename, eachLength, threadNum, blockSize, step, fileNamePrefix);
+            endTime = System.nanoTime();
+
+            System.out.println("TOTAL Time:" + (endTime - startTime));
             //long endTime = System.currentTimeMillis();
             //System.out.println("endTime:"+endTime);
         }

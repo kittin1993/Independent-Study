@@ -3,6 +3,9 @@
     <output-path>$PROJECT_DIR$/out/artifacts/FileHeater_jar4</output-path>
     <root id="archive" name="FileHeater.jar">
       <element id="module-output" name="FileHeater" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/META-INF/MANIFEST.MF" />
+      </element>
     </root>
   </artifact>
 </component>
